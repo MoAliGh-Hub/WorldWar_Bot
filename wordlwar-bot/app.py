@@ -2,6 +2,12 @@ from flask import Flask, jsonify, request, render_template
 import sqlite3
 import time
 import os
+import threading
+import telebot
+
+# ۱. توکن ربات تلگرام
+TOKEN = '8981061980:AAEKqC2myhSzjsURvMEpRjoZzxmF_IeTghQ'
+bot = telebot.TeleBot(TOKEN)
 
 app = Flask(__name__)
 DB_NAME = "world_war_game.db"
@@ -31,18 +37,24 @@ def init_db():
     conn.commit()
     conn.close()
 
-init_db()
-
 SUPERPOWERS = {
     "Russia": {"name": "روسیه", "pack": "پک اتمی تزار ☢️"},
     "USA": {"name": "آمریکا", "pack": "پک برتری هوایی ✈️"},
     "Iran": {"name": "ایران", "pack": "پک موشکی نقطه‌زن 🚀"},
     "UK": {"name": "انگلیس", "pack": "پک نیروی دریایی سلطنتی 🚢"},
-    "France": {"name": "فرانسه", "pack": "پک زرهی زمینی 🎖"},
+    "France": {"name": "فرانسه", "pack": "پک زرهی زمینی 🎖️"},
     "Israel": {"name": "اسرائیل", "pack": "پک جنگ سایبری و هکری 💻"},
     "China": {"name": "چین", "pack": "پک ساخت و ساز سریع 🏭"}
 }
 
+# ------ بخش ربات تلگرام ------
+@bot.message_handler(commands=['start'])
+def send_welcome(message):
+    user_id = message.from_user.id
+    name = message.from_user.first_name or "فرمانده"
+    bot.reply_to(message, f"سلام {name} عزیز! ⚔️\nبه ربات جنگ جهانی خوش آمدی.\nمینی‌اپ بازی فعال و آماده استفاده است.")
+
+# ------ بخش APIهای وب و فلاسک ------
 @app.route('/')
 def home():
     return render_template('index.html')
@@ -85,15 +97,15 @@ def get_country(user_id):
         return jsonify({"error": "Player not found"}), 404
 
     now = int(time.time())
-    last_collect = p[14]
+    last_collect = p[14] if p[14] else now
     intervals = (now - last_collect) // 7200
 
     if intervals > 0:
-        new_gold = p[5] + (intervals * p[9] * 500)
+        new_gold = p[4] + (intervals * p[9] * 500)
         new_iron = p[6] + (intervals * p[10] * 800)
         new_oil = p[7] + (intervals * p[11] * 1000)
         new_uranium = p[8] + (intervals * p[12] * 100)
-        new_cash = p[4] + (intervals * p[13] * 200000)
+        new_cash = p[5] + (intervals * p[13] * 200000)
 
         cursor.execute("""
             UPDATE players SET cash=?, gold=?, iron=?, oil=?, uranium=?, last_resource_collect=?
@@ -110,8 +122,8 @@ def get_country(user_id):
         "country_name": p[1],
         "is_superpower": p[2],
         "special_pack": p[3],
-        "cash": p[4],
-        "gold": p[5],
+        "cash": p[5],
+        "gold": p[4],
         "iron": p[6],
         "oil": p[7],
         "uranium": p[8],
@@ -124,7 +136,7 @@ def get_country(user_id):
         }
     })
 
-@app.route('/api/build',methods=['POST'])
+@app.route('/api/build', methods=['POST'])
 def build():
     data = request.json
     user_id = data.get('user_id')
@@ -161,7 +173,13 @@ def build():
 
     return jsonify({"status": "success", "message": "سازه ساخته شد."})
 
+# ------ اجرای دیتابیس و روشن کردن Thread ربات ------
 init_db()
+
+def start_bot():
+    bot.infinity_polling(skip_pending=True)
+
+threading.Thread(target=start_bot, daemon=True).start()
 
 if __name__ == '__main__':
     port = int(os.environ.get('PORT', 5000))
