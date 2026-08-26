@@ -12,81 +12,96 @@
         button { background: #2e78d2; color: #fff; border: none; padding: 10px; border-radius: 8px; font-weight: bold; cursor: pointer; width: 100%; }
         .badge { background: #ff9800; color: #000; padding: 3px 8px; border-radius: 5px; font-size: 12px; font-weight: bold; }
         .map-placeholder { width: 100%; height: 160px; background: url('https://upload.wikimedia.org/wikipedia/commons/8/80/World_map_-_low_resolution.svg') no-repeat center; background-size: cover; border-radius: 8px; border: 1px solid #444; margin-bottom: 15px; }
-        .market-row { display: flex; justify-content: space-between; align-items: center; background: #1e293b; padding: 10px; border-radius: 8px; margin-bottom: 8px; font-size: 14px; }
-        .market-btns { display: flex; gap: 5px; width: 50%; }
+        .market-row { display: flex; flex-direction: column; background: #1e293b; padding: 10px; border-radius: 8px; margin-bottom: 10px; font-size: 14px; gap: 8px; }
+        .market-info { display: flex; justify-content: space-between; align-items: center; }
+        .market-action { display: flex; gap: 5px; align-items: center; }
+        .market-action input { width: 60px; padding: 8px; border-radius: 6px; border: 1px solid #444; background: #0f172a; color: #fff; text-align: center; }
         .btn-buy { background: #22c55e !important; }
         .btn-sell { background: #ef4444 !important; }
+        #error-screen { text-align: center; padding: 50px 20px; display: none; }
     </style>
 </head>
 <body>
 
-    <h2>🌍 جنگ جهانی: ابرقدرت‌ها</h2>
-    <div class="map-placeholder"></div>
-
-    <div class="card">
-        <h3>🏛 کشور: <span id="c-name">...</span> <span id="c-pack" class="badge"></span></h3>
-        <p>💵 بودجه: <b id="c-cash">0</b> دلار | 🛢 نفت: <b id="c-oil">0</b> بشکه</p>
-        <p>🪙 طلا: <b id="c-gold">0</b> | 🔩 آهن: <b id="c-iron">0</b> | ☢️ اورانیوم: <b id="c-uranium">0</b></p>
+    <div id="error-screen">
+        <h2>❌ دسترسی محدود است</h2>
+        <p id="err-msg">حساب شما هنوز توسط ادمین تایید نشده است و کشوری ندارید.</p>
+        <p style="color: #94a3b8; font-size: 13px;">لطفاً منتظر بمانید تا از طریق ربات تلگرام کشورتان اختصاص یابد.</p>
     </div>
 
-    <h3>🏭 زیرساخت‌ها و معادن (حداکثر ۳)</h3>
-    <div class="card grid">
-        <div>
-            <p>🛢 نفت: <b id="cnt-oil">0</b>/3</p>
-            <button onclick="build('oil_mines')">ساخت (100k$)</button>
-        </div>
-        <div>
-            <p>🪙 طلا: <b id="cnt-gold">0</b>/3</p>
-            <button onclick="build('gold_mines')">ساخت (100k$)</button>
-        </div>
-        <div>
-            <p>🔩 آهن: <b id="cnt-iron">0</b>/3</p>
-            <button onclick="build('iron_mines')">ساخت (100k$)</button>
-        </div>
-        <div>
-            <p>☢️ اورانیوم: <b id="cnt-uranium">0</b>/3</p>
-            <button onclick="build('uranium_mines')">ساخت (100k$)</button>
-        </div>
-    </div>
-    <div class="card">
-        <p>🖨 چاپ اسکناس: <b id="cnt-cash">0</b>/3</p>
-        <button onclick="build('cash_factories')">ساخت کارخانه (100k$)</button>
-    </div>
+    <div id="game-content">
+        <h2>🌍 جنگ جهانی: ابرقدرت‌ها</h2>
+        <div class="map-placeholder"></div>
 
-    <!-- بخش بازار جهانی منابع -->
-    <div class="card">
-        <h3>🛒 بازار جهانی منابع</h3>
-        <p style="font-size: 11px; color: #94a3b8;">خرید به قیمت بازار | فروش به یک‌دهم قیمت</p>
-        
-        <div class="market-row">
-            <span>🔩 آهن <br><small>خرید: 10k | فروش: 1k</small></span>
-            <div class="market-btns">
-                <button class="btn-buy" onclick="marketAction('iron', 'buy')">خرید</button>
-                <button class="btn-sell" onclick="marketAction('iron', 'sell')">فروش</button>
-            </div>
+        <div class="card">
+            <h3>🏛 کشور: <span id="c-name">...</span> <span id="c-pack" class="badge"></span></h3>
+            <p>💵 بودجه: <b id="c-cash">0</b> دلار | 🛢 نفت: <b id="c-oil">0</b> بشکه</p>
+            <p>🪙 طلا: <b id="c-gold">0</b> | 🔩 آهن: <b id="c-iron">0</b> | ☢️ اورانیوم: <b id="c-uranium">0</b></p>
         </div>
 
-        <div class="market-row">
-            <span>🛢 نفت <br><small>خرید: 25k | فروش: 2.5k</small></span>
-            <div class="market-btns">
-                <button class="btn-buy" onclick="marketAction('oil', 'buy')">خرید</button>
-                <button class="btn-sell" onclick="marketAction('oil', 'sell')">فروش</button>
+        <h3>🏭 زیرساخت‌ها و معادن (حداکثر ۳)</h3>
+        <div class="card grid">
+            <div>
+                <p>🛢 نفت: <b id="cnt-oil">0</b>/3</p>
+                <button onclick="build('oil_mines')">ساخت (100k$)</button>
+            </div>
+            <div>
+                <p>🪙 طلا: <b id="cnt-gold">0</b>/3</p>
+                <button onclick="build('gold_mines')">ساخت (100k$)</button>
+            </div>
+            <div>
+                <p>🔩 آهن: <b id="cnt-iron">0</b>/3</p>
+                <button onclick="build('iron_mines')">ساخت (100k$)</button>
+            </div>
+            <div>
+                <p>☢️ اورانیوم: <b id="cnt-uranium">0</b>/3</p>
+                <button onclick="build('uranium_mines')">ساخت (100k$)</button>
             </div>
         </div>
+        <div class="card">
+            <p>🖨 چاپ اسکناس: <b id="cnt-cash">0</b>/3</p>
+            <button onclick="build('cash_factories')">ساخت کارخانه (100k$)</button>
+        </div>
 
-        <div class="market-row">
-            <span>🪙 طلا <br><small>خرید: 100k | فروش: 40k</small></span>
-            <div class="market-btns">
-                <button class="btn-buy" onclick="marketAction('gold', 'buy')">خرید</button>
-                <button class="btn-sell" onclick="marketAction('gold', 'sell')">فروش</button>
-            </div>
+        <!-- بخش بازار جهانی منابع -->
+        <div class="card">
+            <h3>🛒 بازار جهانی منابع</h3>
+            <p style="font-size: 11px; color: #94a3b8;">تعداد دلخواه را وارد کنید و خرید/فروش بزنید</p>
+            
+            <div class="market-row">
+                <div class="market-info"><span>🔩 آهن (خرید: 10k | فروش: 1k)</span></div>
+                <div class="market-action">
+                    <input type="number" id="amt-iron" value="1" min="1">
+                    <button class="btn-buy" onclick="marketAction('iron', 'buy')">خرید</button>
+                    <button class="btn-sell" onclick="marketAction('iron', 'sell')">فروش</button>
+                </div>
             </div>
 
-        <div class="market-row">
-            <span>☢️ اورانیوم <br><small>خرید: 60k | فروش: 6k</small></span>
-            <div class="market-btns">
-                <button class="btn-buy" onclick="marketAction('uranium', 'buy')">خرید</button>
-                <button class="btn-sell" onclick="marketAction('uranium', 'sell')">فروش</button>
+            <div class="market-row">
+                <div class="market-info"><span>🛢 نفت (خرید: 25k | فروش: 2.5k)</span></div>
+                <div class="market-action">
+                    <input type="number" id="amt-oil" value="1" min="1">
+                    <button class="btn-buy" onclick="marketAction('oil', 'buy')">خرید</button>
+                    <button class="btn-sell" onclick="marketAction('oil', 'sell')">فروش</button>
+                </div>
+            </div>
+
+            <div class="market-row">
+                <div class="market-info"><span>🪙 طلا (خرید: 100k | فروش: 40k)</span></div>
+                <div class="market-action">
+                    <input type="number" id="amt-gold" value="1" min="1">
+                    <button class="btn-buy" onclick="marketAction('gold', 'buy')">خرید</button>
+                    <button class="btn-sell" onclick="marketAction('gold', 'sell')">فروش</button>
+                </div>
+            </div>
+
+            <div class="market-row">
+                <div class="market-info"><span>☢️ اورانیوم (خرید: 60k | فروش: 6k)</span></div>
+                <div class="market-action">
+                    <input type="number" id="amt-uranium" value="1" min="1">
+                    <button class="btn-buy" onclick="marketAction('uranium', 'buy')">خرید</button>
+                    <button class="btn-sell" onclick="marketAction('uranium', 'sell')">فروش</button>
+                </div>
             </div>
         </div>
     </div>
@@ -97,18 +112,15 @@
         
         const user = tg.initDataUnsafe?.user;
         const userId = user?.id || 12345678;
-        const userName = user?.first_name || "ایران";
 
         async function loadData() {
             const res = await fetch(`/api/get_country/${userId}`);
-            if (res.status === 404) {
-                await fetch('/api/login', {
-                    method: 'POST',
-                    headers: {'Content-Type': 'application/json'},
-                    body: JSON.stringify({ user_id: userId, country_name: userName, superpower_key: "Iran" })
-                });
-                return loadData();
+            if (!res.ok) {
+                document.getElementById('game-content').style.display = 'none';
+                document.getElementById('error-screen').style.display = 'block';
+                return;
             }
+            
             const data = await res.json();
             
             document.getElementById('c-name').innerText = data.country_name;
@@ -141,10 +153,13 @@
         }
 
         async function marketAction(resource, action) {
+            const amountInput = document.getElementById(`amt-${resource}`);
+            const amount = parseInt(amountInput.value) || 1;
+
             const res = await fetch('/api/market', {
                 method: 'POST',
                 headers: {'Content-Type': 'application/json'},
-                body: JSON.stringify({ user_id: userId, resource: resource, action: action })
+                body: JSON.stringify({ user_id: userId, resource: resource, action: action, amount: amount })
             });
             const result = await res.json();
             if (res.ok) {
