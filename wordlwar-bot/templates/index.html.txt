@@ -1,0 +1,104 @@
+<!DOCTYPE html>
+<html lang="fa" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>جنگ جهانی: نبرد ابرقدرت‌ها</title>
+    <script src="https://telegram.org/js/telegram-web-app.js"></script>
+    <style>
+        body { font-family: Tahoma, sans-serif; background-color: #1a1e29; color: #fff; margin: 0; padding: 15px; }
+        .card { background: #252a38; border-radius: 12px; padding: 15px; margin-bottom: 15px; border: 1px solid #343b4d; }
+        .grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+        button { background: #2e78d2; color: #fff; border: none; padding: 10px; border-radius: 8px; font-weight: bold; cursor: pointer; width: 100%; }
+        .badge { background: #ff9800; color: #000; padding: 3px 8px; border-radius: 5px; font-size: 12px; font-weight: bold; }
+        .map-placeholder { width: 100%; height: 160px; background: url('https://upload.wikimedia.org/wikipedia/commons/8/80/World_map_-_low_resolution.svg') no-repeat center; background-size: cover; border-radius: 8px; border: 1px solid #444; margin-bottom: 15px; }
+    </style>
+</head>
+<body>
+
+    <h2>🌍 جنگ جهانی: ابرقدرت‌ها</h2>
+    <div class="map-placeholder"></div>
+
+    <div class="card">
+        <h3>🏛 کشور: <span id="c-name">...</span> <span id="c-pack" class="badge"></span></h3>
+        <p>💵 بودجه: <b id="c-cash">0</b> دلار | 🛢 نفت: <b id="c-oil">0</b> بشکه</p>
+        <p>🪙 طلا: <b id="c-gold">0</b> | 🔩 آهن: <b id="c-iron">0</b> | ☢️ اورانیوم: <b id="c-uranium">0</b></p>
+    </div>
+
+    <h3>🏭 زیرساخت‌ها و معادن (حداکثر ۳)</h3>
+    <div class="card grid">
+        <div>
+            <p>🛢 نفت: <b id="cnt-oil">0</b>/3</p>
+            <button onclick="build('oil_mines')">ساخت (100k$)</button>
+        </div>
+        <div>
+            <p>🪙 طلا: <b id="cnt-gold">0</b>/3</p>
+            <button onclick="build('gold_mines')">ساخت (100k$)</button>
+        </div>
+        <div>
+            <p>🔩 آهن: <b id="cnt-iron">0</b>/3</p>
+            <button onclick="build('iron_mines')">ساخت (100k$)</button>
+        </div>
+        <div>
+            <p>☢️ اورانیوم: <b id="cnt-uranium">0</b>/3</p>
+            <button onclick="build('uranium_mines')">ساخت (100k$)</button>
+        </div>
+    </div>
+    <div class="card">
+        <p>🖨 چاپ اسکناس: <b id="cnt-cash">0</b>/3</p>
+        <button onclick="build('cash_factories')">ساخت کارخانه (100k$)</button>
+    </div>
+
+    <script>
+        const tg = window.Telegram.WebApp;
+        tg.expand();
+        
+        const user = tg.initDataUnsafe?.user;
+        const userId = user?.id || 12345678;
+        const userName = user?.first_name || "ایران";
+
+        async function loadData() {
+            const res = await fetch(`/api/get_country/${userId}`);
+            if (res.status === 404) {
+                await fetch('/api/login', {
+                    method: 'POST',
+                    headers: {'Content-Type': 'application/json'},
+                    body: JSON.stringify({ user_id: userId, country_name: userName, superpower_key: "Iran" })
+                });
+                return loadData();
+            }
+            const data = await res.json();
+            
+            document.getElementById('c-name').innerText = data.country_name;
+            document.getElementById('c-pack').innerText = data.special_pack;
+            document.getElementById('c-cash').innerText = data.cash.toLocaleString();
+            document.getElementById('c-oil').innerText = data.oil.toLocaleString();
+            document.getElementById('c-gold').innerText = data.gold.toLocaleString();
+            document.getElementById('c-iron').innerText = data.iron.toLocaleString();
+            document.getElementById('c-uranium').innerText = data.uranium.toLocaleString();
+
+            document.getElementById('cnt-oil').innerText = data.buildings.oil_mines;
+            document.getElementById('cnt-gold').innerText = data.buildings.gold_mines;
+            document.getElementById('cnt-iron').innerText = data.buildings.iron_mines;
+            document.getElementById('cnt-uranium').innerText = data.buildings.uranium_mines;
+            document.getElementById('cnt-cash').innerText = data.buildings.cash_factories;
+        }
+
+        async function build(type) {
+            const res = await fetch('/api/build', {
+                method: 'POST',
+                headers: {'Content-Type': 'application/json'},
+                body: JSON.stringify({ user_id: userId, type: type })
+            });
+            const result = await res.json();
+            if (res.ok) {
+                loadData();
+            } else {
+                alert(result.error);
+            }
+        }
+
+        loadData();
+    </script>
+</body>
+</html>
