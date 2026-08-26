@@ -5,7 +5,7 @@ import os
 import threading
 import telebot
 
-# ۱. توکن ربات تلگرام
+# توکن ربات تلگرام
 TOKEN = '8981061980:AAEKqC2myhSzjsURvMEpRjoZzxmF_IeTghQ'
 bot = telebot.TeleBot(TOKEN)
 
@@ -35,7 +35,8 @@ def init_db():
             oil_mines INTEGER DEFAULT 0,
             uranium_mines INTEGER DEFAULT 0,
             cash_factories INTEGER DEFAULT 0,
-            last_resource_collect INTEGER
+            last_resource_collect INTEGER,
+            is_active INTEGER DEFAULT 0
         )
     """)
     # جدول ادمین‌ها
@@ -48,27 +49,69 @@ def init_db():
     conn.close()
 
 SUPERPOWERS = {
-    "Russia": {"name": "روسیه", "pack": "پک اتمی تزار ☢️"},
+    # 🌎 قاره آمریکا (آمریکا و ۷ کشور معروف دیگر)
     "USA": {"name": "آمریکا", "pack": "پک برتری هوایی ✈️"},
-    "Iran": {"name": "ایران", "pack": "پک موشکی نقطه‌زن 🚀"},
+    "Canada": {"name": "کانادا", "pack": "پک منابع و معادن غنی 🍁"},
+    "Brazil": {"name": "برزیل", "pack": "پک ارتش جنگل و کشاورزی ⚽"},
+    "Argentina": {"name": "آرژانتین", "pack": "پک زرهی استراتژیک 🛡️"},
+    "Mexico": {"name": "مکزیک", "pack": "پک مرزبانان سریع 🦅"},
+    "Colombia": {"name": "کلمبیا", "pack": "پک عملیات ویژه کوهستان ⛰️"},
+    "Chile": {"name": "شیلی", "pack": "پک کنترل سواحل اقیانوس 🌊"},
+    "Peru": {"name": "پرو", "pack": "پک باستانی و پدافندی 🛕"},
+
+    # 🇪🇺 اروپا (۱۰ کشور معروف شامل فرانسه، انگلیس، آلمان و دیگران)
     "UK": {"name": "انگلیس", "pack": "پک نیروی دریایی سلطنتی 🚢"},
-    "France": {"name": "فرانسه", "pack": "پک زرهی زمینی 🎖️"},
+    "France": {"name": "فرانسه", "pack": "پک زرهی زمینی و اتمی 🎖️"},
+    "Germany": {"name": "آلمان", "pack": "پک صنعت و مهندسی پیشرفته ⚙️"},
+    "Italy": {"name": "ایتالیا", "pack": "پک ناوگان مدیترانه ⚓"},
+    "Spain": {"name": "اسپانیا", "pack": "پک استراتژی دریایی ⛵"},
+    "Ukraine": {"name": "اوکراین", "pack": "پک مقاومت پهپادی 🛸"},
+    "Poland": {"name": "لهستان", "pack": "پک سپر دفاع موشکی 🛡️"},
+    "Sweden": {"name": "سوئد", "pack": "پک تسلیحات پیشرفته رادارگریز 📡"},
+    "Netherlands": {"name": "هلند", "pack": "پک لجستیک و بنادر تجاری 🌐"},
+    "Switzerland": {"name": "سوئیس", "pack": "پک بانکداری و امنیت مالی 🏦"},
+
+    # 🌏 آسیا و خاورمیانه (۱۰ کشور معروف شامل ایران، اسرائیل، روسیه و دیگران)
+    "Iran": {"name": "ایران", "pack": "پک موشکی نقطه‌زن 🚀"},
     "Israel": {"name": "اسرائیل", "pack": "پک جنگ سایبری و هکری 💻"},
-    "China": {"name": "چین", "pack": "پک ساخت و ساز سریع 🏭"}
+    "Russia": {"name": "روسیه", "pack": "پک اتمی تزار ☢️"},
+    "China": {"name": "چین", "pack": "پک ساخت و ساز سریع 🏭"},
+    "Japan": {"name": "ژاپن", "pack": "پک فناوری رباتیک و هوش مصنوعی 🤖"},
+    "India": {"name": "هند", "pack": "پک نیروی انسانی انبوه 🇮🇳"},
+    "Turkey": {"name": "ترکیه", "pack": "پک پهپادهای رزمی بایرکار ✈️"},
+    "SaudiArabia": {"name": "عربستان", "pack": "پک پتروشیمی و دلارهای نفتی 🛢️"},
+    "SouthKorea": {"name": "کره جنوبی", "pack": "پک دفاع هوایی و الکترونیک ⚡"},
+    "Pakistan": {"name": "پاکستان", "pack": "پک تسلیحات اتمی تاکتیکی ⚛️"}
 }
+
+admin_pending_country = {}
 
 # ------ بخش ربات تلگرام ------
 @bot.message_handler(commands=['start'])
 def send_welcome(message):
     user_id = message.from_user.id
     name = message.from_user.first_name or "فرمانده"
-    bot.reply_to(message, f"سلام {name} عزیز! ⚔️\nبه ربات جنگ جهانی خوش آمدی.\nمینی‌اپ بازی فعال و آماده استفاده است.")
+    
+    conn = sqlite3.connect(DB_NAME)
+    cursor = conn.cursor()
+    cursor.execute("SELECT is_active FROM players WHERE user_id = ?", (user_id,))
+    p = cursor.fetchone()
+    
+    if not p:
+        cursor.execute("""
+            INSERT OR IGNORE INTO players (user_id, country_name, is_active, last_resource_collect)
+            VALUES (?, ?, 0, ?)
+        """, (user_id, name, int(time.time())))
+        conn.commit()
+    conn.close()
+    
+    bot.reply_to(message, f"سلام {name} عزیز! ⚔️\nبه ربات جنگ جهانی خوش آمدی.\n\n❌ حساب شما هنوز توسط ادمین تایید نشده و کشوری به شما اختصاص نیافته است. لطفاً منتظر بمانید.")
 
 # ------ بخش مدیریت ادمین‌ها ------
 @bot.message_handler(commands=['newadmin'])
 def new_admin(message):
     if message.from_user.id != OWNER_ID:
-        bot.reply_to(message, "❌ شما دسترسی به این دستور را ندارید (مخصوص مالک ربات است).")
+        bot.reply_to(message, "❌ شما دسترسی به این دستور را ندارید.")
         return
     
     args = message.text.split()
@@ -87,54 +130,98 @@ def new_admin(message):
     try:
         cursor.execute("INSERT OR IGNORE INTO admins (user_id) VALUES (?)", (target_id,))
         conn.commit()
-        bot.reply_to(message, f"✅ کاربر با آیدی `{target_id}` با موفقیت به عنوان ادمین ثبت شد.", parse_mode="Markdown")
+        bot.reply_to(message, f"✅ کاربر با آیدی `{target_id}` ادمین شد.", parse_mode="Markdown")
     except Exception as e:
-        bot.reply_to(message, f"❌ خطا در ثبت ادمین: {e}")
+        bot.reply_to(message, f"❌ خطا: {e}")
     finally:
         conn.close()
 
-@bot.message_handler(commands=['adminlist'])
-def admin_list(message):
-    if message.from_user.id != OWNER_ID:
+def is_admin(user_id):
+    if user_id == OWNER_ID:
+        return True
+    conn = sqlite3.connect(DB_NAME)
+    cursor = conn.cursor()
+    cursor.execute("SELECT user_id FROM admins WHERE user_id = ?", (user_id,))
+    res = cursor.fetchone()
+    conn.close()
+    return res is not None
+
+# ------ دستور اختصاص کشور (/keshvar) ------
+@bot.message_handler(commands=['keshvar'])
+def keshvar_command(message):
+    if not is_admin(message.from_user.id):
         bot.reply_to(message, "❌ شما دسترسی به این دستور را ندارید.")
         return
     
-    conn = sqlite3.connect(DB_NAME)
-    cursor = conn.cursor()
-    cursor.execute("SELECT user_id FROM admins")
-    admins = cursor.fetchall()
-    conn.close()
+    markup = telebot.types.InlineKeyboardMarkup(row_width=2)
+    for key, val in SUPERPOWERS.items():
+        markup.add(telebot.types.InlineKeyboardButton(f"{val['name']} ({val['pack']})", callback_data=f"set_country_{key}"))
     
-    if not admins:
-        bot.reply_to(message, "📋 هیچ ادمینی تاکنون ثبت نشده است.")
-        return
-    
-    markup = telebot.types.InlineKeyboardMarkup()
-    text = "📋 **لیست ادمین‌های ربات:**\n\n"
-    for row in admins:
-        uid = row[0]
-        text += f"👤 آیدی: `{uid}`\n"
-        markup.add(telebot.types.InlineKeyboardButton(f"🗑️ حذف ادمین {uid}", callback_data=f"del_admin_{uid}"))
-    
-    bot.reply_to(message, text, reply_markup=markup, parse_mode="Markdown")
+    bot.reply_to(message, "🏛 **لطفاً کشور مورد نظر را انتخاب کنید:**", reply_markup=markup, parse_mode="Markdown")
 
-@bot.callback_query_handler(func=lambda call: call.data.startswith('del_admin_'))
-def remove_admin_callback(call):
-    if call.from_user.id != OWNER_ID:
-        bot.answer_callback_query(call.id, "❌ شما مالک ربات نیستید!", show_alert=True)
+@bot.callback_query_handler(func=lambda call: call.data.startswith('set_country_'))
+def country_selected_callback(call):
+    if not is_admin(call.from_user.id):
+        bot.answer_callback_query(call.id, "❌ دسترسی غیرمجاز!", show_alert=True)
         return
-    
-    target_id = int(call.data.replace('del_admin_', ''))
+        
+    country_key = call.data.replace('set_country_', '')
+    if country_key not in SUPERPOWERS:
+        bot.answer_callback_query(call.id, "❌ کشور نامعتبر است.", show_alert=True)
+        return
+        
+    admin_pending_country[call.from_user.id] = country_key
+    bot.answer_callback_query(call.id, f"کشور {SUPERPOWERS[country_key]['name']} انتخاب شد.")
+    bot.edit_message_text(
+        f"✅ کشور **{SUPERPOWERS[country_key]['name']}** انتخاب شد.\n\nاکنون **آیدی عددی کاربر** را در قالب یک پیام ارسال کنید تا این کشور به او اختصاص یابد.",
+        call.message.chat.id,
+        call.message.message_id,
+        parse_mode="Markdown"
+    )
+
+@bot.message_handler(func=lambda message: message.from_user.id in admin_pending_country)
+def get_user_id_for_country(message):
+    admin_id = message.from_user.id
+    if not is_admin(admin_id):
+        return
+        
+    try:
+        target_user_id = int(message.text.strip())
+    except ValueError:
+        bot.reply_to(message, "❌ آیدی عددی باید فقط شامل عدد باشد. دوباره ارسال کنید.")
+        return
+        
+    country_key = admin_pending_country.pop(admin_id)
+    c_info = SUPERPOWERS[country_key]
     
     conn = sqlite3.connect(DB_NAME)
     cursor = conn.cursor()
-    cursor.execute("DELETE FROM admins WHERE user_id = ?", (target_id,))
+    cursor.execute("SELECT user_id FROM players WHERE user_id = ?", (target_user_id,))
+    player_exists = cursor.fetchone()
+    
+    start_cash = 1000000
+    pack = c_info['pack']
+    c_name = c_info['name']
+    
+    if player_exists:
+        cursor.execute("""
+            UPDATE players 
+            SET country_name = ?, is_superpower = 1, special_pack = ?, cash = cash + ?, is_active = 1 
+            WHERE user_id = ?
+        """, (c_name, pack, start_cash, target_user_id))
+    else:
+        cursor.execute("""
+            INSERTINTO players (user_id, country_name, is_superpower, special_pack, cash, is_active, last_resource_collect)
+            VALUES (?, ?, 1, ?, ?, 1, ?)
+        """, (target_user_id, c_name, pack, start_cash, int(time.time())))
+        
     conn.commit()
     conn.close()
     
-    bot.answer_callback_query(call.id, f"ادمین {target_id} با موفقیت حذف شد.")
+    bot.reply_to(message, f"✅ با موفقیت کشور **{c_name}** به کاربر با آیدی `{target_user_id}` اختصاص یافت و حسابش فعال شد!", parse_mode="Markdown")
+    
     try:
-        bot.edit_message_text("✅ این ادمین از لیست مدیریت حذف شد.", call.message.chat.id, call.message.message_id)
+        bot.send_message(target_user_id, f"🎉 تبریک فرمانده!\nکشور شما **{c_name}** با موفقیت تایید و ثبت شد. هم اکنون می‌توانید وارد مینی‌اپ بازی شوید.")
     except:
         pass
 
@@ -144,32 +231,6 @@ def remove_admin_callback(call):
 def home():
     return render_template('index.html')
 
-@app.route('/api/login', methods=['POST'])
-def login():
-    data = request.json
-    user_id = data.get('user_id')
-    country_name = data.get('country_name', 'کشور ناشناس')
-    selected_superpower = data.get('superpower_key', 'Iran')
-
-    conn = sqlite3.connect(DB_NAME)
-    cursor = conn.cursor()
-    cursor.execute("SELECT * FROM players WHERE user_id = ?", (user_id,))
-    player = cursor.fetchone()
-
-    if not player:
-        is_sp = 1 if selected_superpower in SUPERPOWERS else 0
-        pack = SUPERPOWERS[selected_superpower]['pack'] if is_sp else "پک معمولی"
-        start_cash = 1000000 if is_sp else 500000
-        
-        cursor.execute("""
-            INSERT INTO players (user_id, country_name, is_superpower, special_pack, cash, last_resource_collect)
-            VALUES (?, ?, ?, ?, ?, ?)
-        """, (user_id, country_name, is_sp, pack, start_cash, int(time.time())))
-        conn.commit()
-
-    conn.close()
-    return jsonify({"status": "success"})
-
 @app.route('/api/get_country/<int:user_id>', methods=['GET'])
 def get_country(user_id):
     conn = sqlite3.connect(DB_NAME)
@@ -177,9 +238,9 @@ def get_country(user_id):
     cursor.execute("SELECT * FROM players WHERE user_id = ?", (user_id,))
     p = cursor.fetchone()
 
-    if not p:
+    if not p or p[15] == 0:
         conn.close()
-        return jsonify({"error": "Player not found"}), 404
+        return jsonify({"error": "Unauthorized", "message": "حساب شما هنوز توسط ادمین تایید نشده است."}), 403
 
     now = int(time.time())
     last_collect = p[14] if p[14] else now
@@ -227,28 +288,31 @@ def build():
     user_id = data.get('user_id')
     b_type = data.get('type')
 
-    valid_types = ["gold_mines", "iron_mines", "oil_mines", "uranium_mines", "cash_factories"]
-    if b_type not in valid_types:
-        return jsonify({"error": "نوع ساخت‌وساز نامعتبر است"}), 400
-
     conn = sqlite3.connect(DB_NAME)
     cursor = conn.cursor()
-    cursor.execute("SELECT cash, gold_mines, iron_mines, oil_mines, uranium_mines, cash_factories FROM players WHERE user_id = ?", (user_id,))
+    cursor.execute("SELECT is_active FROM players WHERE user_id = ?", (user_id,))
     p = cursor.fetchone()
-
-    if not p:
+    if not p or p[0] == 0:
         conn.close()
-        return jsonify({"error": "کاربر یافت نشد"}), 404
+        return jsonify({"error": "دسترسی غیرمجاز یا تایید نشده"}), 403
+
+    valid_types = ["gold_mines", "iron_mines", "oil_mines", "uranium_mines", "cash_factories"]
+    if b_type not in valid_types:
+        conn.close()
+        return jsonify({"error": "نوع ساخت‌وساز نامعتبر است"}), 400
+
+    cursor.execute("SELECT cash, gold_mines, iron_mines, oil_mines, uranium_mines, cash_factories FROM players WHERE user_id = ?", (user_id,))
+    p_data = cursor.fetchone()
 
     cost = 100000
     col_map = {"gold_mines": 1, "iron_mines": 2, "oil_mines": 3, "uranium_mines": 4, "cash_factories": 5}
-    current_count = p[col_map[b_type]]
+    current_count = p_data[col_map[b_type]]
 
     if current_count >= 3:
         conn.close()
         return jsonify({"error": "حداکثر ظرفیت (۳ عدد) برای این سازه تکمیل است!"}), 400
 
-    if p[0] < cost:
+    if p_data[0] < cost:
         conn.close()
         return jsonify({"error": "بودجه کافی نیست!"}), 400
 
@@ -258,68 +322,74 @@ def build():
 
     return jsonify({"status": "success", "message": "سازه ساخته شد."})
 
-# ------ مسیر API بازار خرید و فروش منابع ------
 @app.route('/api/market', methods=['POST'])
 def market_action():
     data = request.json
     user_id = data.get('user_id')
-    resource_type = data.get('resource') # iron, oil, gold, uranium
-    action = data.get('action') # buy, sell
+    resource_type = data.get('resource')
+    action = data.get('action')
+    try:
+        amount = int(data.get('amount', 1))
+    except ValueError:
+        amount = 1
+        
+    if amount <= 0:
+        return jsonify({"error": "تعداد نامعتبر است"}), 400
+    
+    conn = sqlite3.connect(DB_NAME)
+    cursor = conn.cursor()
+    cursor.execute("SELECT is_active, cash, iron, oil, gold, uranium FROM players WHERE user_id = ?", (user_id,))
+    p = cursor.fetchone()
+    
+    if not p or p[0] == 0:
+        conn.close()
+        return jsonify({"error": "دسترسی غیرمجاز یا تایید نشده"}), 403
+        
+    cash = p[1]
+    res_map = {"iron": p[2], "oil": p[3], "gold": p[4], "uranium": p[5]}
+    current_res_val = res_map.get(resource_type, 0)
     
     market_prices = {
         "iron": {"buy": 10000, "sell": 1000},
         "oil": {"buy": 25000, "sell": 2500},
-        "gold": {"buy": 100000, "sell": 40000}, # طلا (استثنا)
-        "uranium": {"buy": 60000, "sell": 6000}    # اورانیوم اصلاح شده
+        "gold": {"buy": 100000, "sell": 40000},
+        "uranium": {"buy": 60000, "sell": 6000}
     }
     
     if resource_type not in market_prices or action not in ["buy", "sell"]:
+        conn.close()
         return jsonify({"error": "پارامترهای بازار نامعتبر است"}), 400
         
     prices = market_prices[resource_type]
     
-    conn = sqlite3.connect(DB_NAME)
-    cursor = conn.cursor()
-    cursor.execute("SELECT cash, iron, oil, gold, uranium FROM players WHERE user_id = ?", (user_id,))
-    p = cursor.fetchone()
-    
-    if not p:
-        conn.close()
-        return jsonify({"error": "کاربر یافت نشد"}), 404
-        
-    cash = p[0]
-    res_map = {"iron": p[1], "oil": p[2], "gold": p[3], "uranium": p[4]}
-    current_res_val = res_map[resource_type]
-    
     if action == "buy":
-        cost = prices["buy"]
-        if cash < cost:
+        total_cost = prices["buy"] * amount
+        if cash < total_cost:
             conn.close()
-            return jsonify({"error": "بودجه کافی برای خرید این منبع را نداری!"}), 400
+            return jsonify({"error": f"بودجه کافی نداری! برای خرید {amount} عدد به {total_cost:,} دلار نیاز داری."}), 400
             
         cursor.execute(f"""
             UPDATE players 
-            SET cash = cash - ?, {resource_type} = {resource_type} + 1 
+            SET cash = cash - ?, {resource_type} = {resource_type} + ? 
             WHERE user_id = ?
-        """, (cost, user_id))
+        """, (total_cost, amount, user_id))
         
     elif action == "sell":
-        if current_res_val < 1:
+        if current_res_val < amount:
             conn.close()
-            return jsonify({"error": "موجودی این منبع برای فروش کافی نیست!"}), 400
+            return jsonify({"error": f"موجودی کافی نداری! شما فقط {current_res_val} عدد از این منبع را دارید."}), 400
             
-        revenue = prices["sell"]
+        total_revenue = prices["sell"] * amount
         cursor.execute(f"""
             UPDATE players 
-            SET cash = cash + ?, {resource_type} = {resource_type} - 1 
+            SET cash = cash + ?, {resource_type} = {resource_type} - ? 
             WHERE user_id = ?
-        """, (revenue, user_id))
+        """, (total_revenue, amount, user_id))
         
     conn.commit()
     conn.close()
     return jsonify({"status": "success", "message": "تراکنش بازار با موفقیت انجام شد."})
 
-# ------ اجرای دیتابیس و روشن کردن Thread ربات ------
 init_db()
 
 def start_bot():
